@@ -1,4 +1,4 @@
-name = "fin-app"
+name = "finapp"
 main = "src/index.js"
 compatibility_date = "2026-06-01"
 
