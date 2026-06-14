@@ -65,6 +65,38 @@ input, select, textarea {
 .field-row input { flex: 1; }
 
 /* markets */
+.search-hero { margin-bottom: 14px; }
+.search-hero input {
+  font-size: 17px; padding: 12px 14px;
+  border: 2px solid var(--navy); border-radius: var(--radius);
+}
+.search-hero input:focus { outline: none; border-color: var(--accent); }
+
+.movers-strip {
+  display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 8px 0;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.movers-strip::-webkit-scrollbar { display: none; }
+.mover-card {
+  flex: 0 0 auto; min-width: 100px; padding: 10px 12px;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  cursor: pointer; text-align: center;
+}
+.mover-card:active { background: #f0ece2; }
+.mover-card .mover-sym { font-weight: 700; font-size: 15px; }
+.mover-card .mover-price { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.mover-card .mover-chg { font-size: 14px; font-weight: 600; margin-top: 2px; }
+
+.exchange-tabs {
+  display: flex; gap: 0; border-bottom: 1px solid var(--line); margin: 14px 0 6px 0;
+}
+.ex-tab {
+  appearance: none; border: none; background: none; padding: 8px 14px;
+  font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.ex-tab.active { color: var(--navy); border-bottom-color: var(--navy); }
+
 .search-row { margin-bottom: 10px; }
 .ticker-list { list-style: none; margin: 0; padding: 0; }
 .ticker-list li {
@@ -127,6 +159,35 @@ table.data th { color: var(--muted); font-weight: 600; font-size: 12px; }
 }
 .chat-buttons { display: flex; gap: 8px; margin-top: 6px; }
 .chat-buttons .btn { flex: 1; font-size: 14px; padding: 9px 10px; }
+
+/* factor composer */
+.fc-settings-row { display: flex; gap: 8px; margin: 8px 0; }
+.fc-setting { flex: 1; }
+.fc-setting input, .fc-setting select { width: 100%; }
+
+.factor-card {
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px;
+  margin-bottom: 8px; background: #faf8f3;
+}
+.factor-card-head { display: flex; align-items: center; gap: 6px; }
+.factor-card-head select { flex: 1; font-size: 13px; padding: 6px 8px; }
+.fc-dir {
+  appearance: none; border: 1px solid var(--line); border-radius: 6px;
+  width: 34px; height: 34px; font-size: 16px; font-weight: 700;
+  cursor: pointer; background: #fff; color: var(--navy); text-align: center;
+  line-height: 32px; padding: 0;
+}
+.fc-dir[data-dir="-1"] { color: var(--bad); }
+.fc-remove {
+  appearance: none; border: none; background: none; font-size: 18px;
+  color: var(--muted); cursor: pointer; padding: 0 4px; line-height: 1;
+}
+.factor-card-body { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.factor-card-body label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.fc-weight-slider { flex: 1; accent-color: var(--navy); }
+.fc-weight-val { font-size: 12px; font-weight: 600; min-width: 32px; text-align: right; }
+.fc-lookback { width: 64px !important; font-size: 13px; padding: 5px 6px; text-align: center; }
+.fc-factor-desc { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
 /* bottom tab bar */
 .tabbar {

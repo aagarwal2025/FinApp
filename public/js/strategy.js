@@ -4,6 +4,21 @@
 // Claude structured-output schema below. Keep STRATEGY_SCHEMA and the executor
 // in lockstep.
 
+export const AVAILABLE_FACTORS = [
+  { id: "momentum", label: "Momentum", short: "mom", desc: "Trailing return", defaultLookback: 252 },
+  { id: "risk_adj_momentum", label: "Risk-adj Mom", short: "riskMom", desc: "Return / volatility", defaultLookback: 252 },
+  { id: "volatility", label: "Volatility", short: "vol", desc: "Annualized std dev", defaultLookback: 63 },
+  { id: "trend_sma", label: "Trend (SMA)", short: "trend", desc: "Distance from moving avg", defaultLookback: 200 },
+  { id: "sma_cross", label: "SMA Cross", short: "smaCross", desc: "Above/below moving avg", defaultLookback: 200 },
+  { id: "mean_reversion", label: "Mean Reversion", short: "meanRev", desc: "Buy-low z-score", defaultLookback: 63 },
+  { id: "max_drawdown", label: "Max Drawdown", short: "maxDD", desc: "Trailing peak-to-trough", defaultLookback: 252 },
+  { id: "downside_dev", label: "Downside Dev", short: "downDev", desc: "Downside-only volatility", defaultLookback: 63 },
+  { id: "high_52w", label: "52W High", short: "52wH", desc: "Proximity to 52-week high", defaultLookback: 252 },
+  { id: "autocorrelation", label: "Autocorrelation", short: "autoCorr", desc: "Return serial correlation", defaultLookback: 63 },
+];
+
+const FACTOR_IDS = AVAILABLE_FACTORS.map((f) => f.id);
+
 // JSON Schema for Claude `output_config.format` (structured outputs).
 // Constraints honored: additionalProperties:false on every object; no numeric
 // min/max or string length (unsupported); discriminated union via anyOf + const.
@@ -72,6 +87,45 @@ export const STRATEGY_SCHEMA = {
           },
           required: ["type"],
         },
+        {
+          type: "object",
+          additionalProperties: false,
+          description: "Factor model: score each universe asset by a weighted combination of z-score-normalized price factors. rank_top1 holds the highest-scoring asset; score_weighted allocates proportionally to positive scores. Falls to safe_asset when all scores are negative. Supported factors: momentum, risk_adj_momentum, volatility, trend_sma, sma_cross, mean_reversion, max_drawdown, downside_dev, high_52w, autocorrelation.",
+          properties: {
+            type: { type: "string", enum: ["factor_score"] },
+            factors: {
+              type: "array",
+              items: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  factor: {
+                    type: "string",
+                    enum: FACTOR_IDS,
+                    description: "Which price-based factor to compute",
+                  },
+                  weight: { type: "number", description: "Relative weight, positive" },
+                  direction: { type: "integer", description: "+1 = higher is better, -1 = lower is better" },
+                  params: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      lookback_days: { type: "integer", description: "Lookback window in calendar days" },
+                    },
+                    required: ["lookback_days"],
+                  },
+                },
+                required: ["factor", "weight", "direction", "params"],
+              },
+            },
+            combine: {
+              type: "string",
+              enum: ["rank_top1", "score_weighted"],
+              description: "rank_top1 = hold the single highest-scoring asset; score_weighted = allocate proportionally to positive-scoring assets",
+            },
+          },
+          required: ["type", "factors", "combine"],
+        },
       ],
     },
   },
@@ -112,6 +166,23 @@ export const BUILTIN_STRATEGIES = [
       ],
     },
   },
+  {
+    name: "Quality Momentum",
+    description:
+      "Factor model: rank VTI, VXUS, SPY, QQQ, GLD by a blend of 12-month momentum, low volatility, and proximity to 52-week highs. Hold the top-scoring asset; rotate to VGIT when all scores are negative.",
+    universe: ["VTI", "VXUS", "SPY", "QQQ", "GLD"],
+    safe_asset: "VGIT",
+    rebalance: "monthly",
+    rule: {
+      type: "factor_score",
+      factors: [
+        { factor: "momentum", weight: 0.5, direction: 1, params: { lookback_days: 252 } },
+        { factor: "volatility", weight: 0.3, direction: -1, params: { lookback_days: 63 } },
+        { factor: "high_52w", weight: 0.2, direction: 1, params: { lookback_days: 252 } },
+      ],
+      combine: "rank_top1",
+    },
+  },
 ];
 
 // Every ticker a strategy could trade — used to know which price series to load.
@@ -133,10 +204,20 @@ export function validateStrategy(s) {
   if (!Array.isArray(s.universe) || s.universe.length === 0) errs.push("universe must be a non-empty array");
   if (!s.safe_asset) errs.push("missing safe_asset");
   const t = s.rule?.type;
-  if (!["relative_momentum", "sma_cross", "buy_and_hold"].includes(t)) {
+  if (!["relative_momentum", "sma_cross", "buy_and_hold", "factor_score"].includes(t)) {
     errs.push(`unknown rule.type: ${t}`);
   }
   if (t === "relative_momentum" && !(s.rule.lookback_days > 0)) errs.push("lookback_days must be > 0");
   if (t === "sma_cross" && (!s.rule.asset || !(s.rule.sma_days > 0))) errs.push("sma_cross needs asset and sma_days");
+  if (t === "factor_score") {
+    if (!Array.isArray(s.rule.factors) || s.rule.factors.length === 0) errs.push("factor_score needs at least one factor");
+    else for (const f of s.rule.factors) {
+      if (!FACTOR_IDS.includes(f.factor)) errs.push(`unknown factor: ${f.factor}`);
+      if (!(f.weight > 0)) errs.push(`factor ${f.factor}: weight must be > 0`);
+      if (f.direction !== 1 && f.direction !== -1) errs.push(`factor ${f.factor}: direction must be +1 or -1`);
+      if (!(f.params?.lookback_days > 0)) errs.push(`factor ${f.factor}: lookback_days must be > 0`);
+    }
+    if (!["rank_top1", "score_weighted"].includes(s.rule.combine)) errs.push("combine must be rank_top1 or score_weighted");
+  }
   return { ok: errs.length === 0, errors: errs };
 }

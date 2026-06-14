@@ -138,6 +138,55 @@ async function handleTickers(request, ctx) {
   return out;
 }
 
+// ============================ MOVERS ============================
+const MOVERS_SYMS = TICKER_FALLBACK.slice(14).map(([s]) => s);
+
+async function computeMovers() {
+  const results = await Promise.all(
+    MOVERS_SYMS.map(async (sym) => {
+      try {
+        const d = await fromYahoo(sym);
+        if (d.bars.length < 2) return null;
+        const last = d.bars[d.bars.length - 1].c;
+        const prev = d.bars[d.bars.length - 2].c;
+        return { symbol: sym, price: last, changePct: +((last / prev - 1) * 100).toFixed(2) };
+      } catch { return null; }
+    }),
+  );
+  const valid = results.filter(Boolean);
+  valid.sort((a, b) => b.changePct - a.changePct);
+  return {
+    ok: true,
+    source: "computed",
+    gainers: valid.filter((m) => m.changePct > 0).slice(0, 5),
+    losers: valid.filter((m) => m.changePct < 0).sort((a, b) => a.changePct - b.changePct).slice(0, 5),
+  };
+}
+
+async function handleMovers(request, ctx) {
+  const cache = caches.default;
+  const cacheKey = new Request(new URL("/api/movers", request.url).href, { method: "GET" });
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
+
+  let body;
+  try {
+    body = await computeMovers();
+  } catch {
+    body = { ok: false, reason: "could not compute movers" };
+  }
+
+  const out = new Response(JSON.stringify(body), {
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "access-control-allow-origin": "*",
+      "cache-control": "public, max-age=3600",
+    },
+  });
+  if (body.ok) ctx.waitUntil(cache.put(cacheKey, out.clone()));
+  return out;
+}
+
 // ============================ MENTOR ============================
 const ANTHROPIC = "https://api.anthropic.com/v1/messages";
 const MODEL = "claude-opus-4-8";
@@ -155,6 +204,7 @@ FinApp can backtest and paper-trade strategies of this exact shape:
   - relative_momentum { lookback_days, if_all_negative: "safe_asset" | "best_anyway" } — hold the universe asset with the highest trailing return; rotate to safe_asset if the winner is negative (Antonacci dual momentum)
   - sma_cross { asset, sma_days } — hold asset while above its N-day moving average, else safe_asset
   - buy_and_hold { weights?: [{symbol, weight}] } — static allocation, rebalanced
+  - factor_score { factors: [{factor, weight, direction, params: {lookback_days}}], combine: "rank_top1" | "score_weighted" } — score each universe asset by a weighted combination of z-score-normalized price factors. rank_top1 holds the highest-scoring asset; score_weighted allocates proportionally to positive scores. Falls to safe_asset when all scores are negative. Supported factors (all price-computable, no fundamentals): momentum, risk_adj_momentum, volatility, trend_sma, sma_cross, mean_reversion, max_drawdown, downside_dev, high_52w, autocorrelation. direction: +1 = higher is better, -1 = lower is better. Example: momentum(+1) + volatility(-1) = quality momentum.
 
 When the user asks how to express an idea, describe it in those terms so they can build it here.
 
@@ -268,6 +318,9 @@ export default {
     }
     if (request.method === "GET" && path === "/api/tickers") {
       return handleTickers(request, ctx);
+    }
+    if (request.method === "GET" && path === "/api/movers") {
+      return handleMovers(request, ctx);
     }
     if (request.method === "POST" && path === "/api/mentor") {
       return handleMentor(request, env);

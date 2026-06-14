@@ -79,9 +79,26 @@ export function trailingReturn(bars, days, endIdx) {
   return bars[end].c / bars[i].c - 1;
 }
 
+// --- movers ---
+export async function getMovers() {
+  try {
+    const r = await fetch("/api/movers");
+    return await r.json();
+  } catch {
+    return { ok: false, reason: "network error" };
+  }
+}
+
 // --- formatting ---
-export const fmtMoney = (n) =>
-  n == null || !isFinite(n) ? "—" : "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const CURRENCY_SYMBOLS = { USD: "$", INR: "₹", GBP: "£", EUR: "€", JPY: "¥" };
+export function fmtMoney(n, currency) {
+  if (n == null || !isFinite(n)) return "—";
+  const num = n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (!currency || currency === "USD") return "$" + num;
+  const sym = CURRENCY_SYMBOLS[currency];
+  if (sym) return sym + num;
+  return currency + " " + num;
+}
 export const fmtPct = (x) =>
   x == null || !isFinite(x) ? "—" : (x >= 0 ? "+" : "") + (x * 100).toFixed(1) + "%";
 export const signClass = (x) => (x == null || !isFinite(x) ? "" : x >= 0 ? "pos" : "neg");

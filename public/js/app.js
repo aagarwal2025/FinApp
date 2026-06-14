@@ -5,7 +5,7 @@ import * as data from "./data.js";
 import { renderChart } from "./chart.js";
 import * as pf from "./portfolio.js";
 import { runBacktest } from "./backtest.js";
-import { BUILTIN_STRATEGIES, validateStrategy, symbolsOf } from "./strategy.js";
+import { BUILTIN_STRATEGIES, validateStrategy, symbolsOf, AVAILABLE_FACTORS } from "./strategy.js";
 import { initMentor } from "./mentor.js";
 
 const { fmtMoney, fmtPct, signClass } = data;
@@ -31,10 +31,72 @@ document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () 
 let tickerList = [];
 let currentDetail = null;
 
+const EXCHANGE_TICKERS = {
+  BSE: [
+    { symbol: "RELIANCE.BO", name: "Reliance Industries" }, { symbol: "TCS.BO", name: "Tata Consultancy" },
+    { symbol: "HDFCBANK.BO", name: "HDFC Bank" }, { symbol: "INFY.BO", name: "Infosys" },
+    { symbol: "ICICIBANK.BO", name: "ICICI Bank" }, { symbol: "HINDUNILVR.BO", name: "Hindustan Unilever" },
+    { symbol: "SBIN.BO", name: "State Bank of India" }, { symbol: "BHARTIARTL.BO", name: "Bharti Airtel" },
+    { symbol: "ITC.BO", name: "ITC" }, { symbol: "KOTAKBANK.BO", name: "Kotak Mahindra Bank" },
+    { symbol: "LT.BO", name: "Larsen & Toubro" }, { symbol: "AXISBANK.BO", name: "Axis Bank" },
+    { symbol: "BAJFINANCE.BO", name: "Bajaj Finance" }, { symbol: "MARUTI.BO", name: "Maruti Suzuki" },
+    { symbol: "TITAN.BO", name: "Titan Company" }, { symbol: "SUNPHARMA.BO", name: "Sun Pharma" },
+    { symbol: "ULTRACEMCO.BO", name: "UltraTech Cement" }, { symbol: "NESTLEIND.BO", name: "Nestlé India" },
+    { symbol: "WIPRO.BO", name: "Wipro" }, { symbol: "HCLTECH.BO", name: "HCL Technologies" },
+  ],
+  DFM: [
+    { symbol: "DFM.AE", name: "Dubai Financial Market" }, { symbol: "EMAAR.AE", name: "Emaar Properties" },
+    { symbol: "DIB.AE", name: "Dubai Islamic Bank" }, { symbol: "DU.AE", name: "Emirates Integrated Telecom" },
+    { symbol: "DEWA.AE", name: "Dubai Electricity & Water" }, { symbol: "EMIRATESNBD.AE", name: "Emirates NBD" },
+  ],
+};
+
 async function initMarkets() {
   tickerList = await data.getTickers();
   $("topbar-note").textContent = tickerList.length ? `${tickerList.length.toLocaleString()} tickers` : "";
+  loadMovers();
+  renderExchangeList("US");
 }
+
+async function loadMovers() {
+  const strip = $("movers-strip");
+  const d = await data.getMovers();
+  if (!d.ok) { strip.innerHTML = '<span class="muted" style="padding:12px">Movers unavailable.</span>'; return; }
+  strip.innerHTML = "";
+  const all = [...(d.gainers || []), ...(d.losers || [])];
+  for (const m of all) {
+    const card = document.createElement("div");
+    card.className = "mover-card";
+    const cls = m.changePct >= 0 ? "pos" : "neg";
+    const sign = m.changePct >= 0 ? "+" : "";
+    card.innerHTML =
+      `<div class="mover-sym">${m.symbol}</div>` +
+      `<div class="mover-price">${fmtMoney(m.price)}</div>` +
+      `<div class="mover-chg ${cls}">${sign}${m.changePct.toFixed(1)}%</div>`;
+    card.addEventListener("click", () => openTicker(m.symbol));
+    strip.appendChild(card);
+  }
+}
+
+function renderExchangeList(exchange) {
+  const ul = $("exchange-list");
+  ul.innerHTML = "";
+  if (exchange === "US") return;
+  const list = EXCHANGE_TICKERS[exchange] || [];
+  for (const t of list) {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="sym">${t.symbol}</span><span class="nm">${t.name || ""}</span>`;
+    li.addEventListener("click", () => openTicker(t.symbol));
+    ul.appendChild(li);
+  }
+}
+
+document.querySelectorAll(".ex-tab").forEach((t) =>
+  t.addEventListener("click", () => {
+    document.querySelectorAll(".ex-tab").forEach((b) => b.classList.toggle("active", b === t));
+    renderExchangeList(t.dataset.exchange);
+  }),
+);
 
 let searchTimer;
 $("ticker-search").addEventListener("input", (e) => {
@@ -60,6 +122,8 @@ async function openTicker(symbol) {
   $("detail-price").textContent = "";
   $("detail-returns").innerHTML = '<span class="spinner"></span>';
   $("chart-host").innerHTML = '<p class="muted">Loading…</p>';
+  $("detail-buy").classList.remove("hidden");
+  $("detail-nobusd").classList.add("hidden");
   detail.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const d = await data.getPrices(symbol);
@@ -69,9 +133,15 @@ async function openTicker(symbol) {
     currentDetail = null;
     return;
   }
+  const currency = d.currency || "USD";
   const last = data.latestClose(d.bars);
-  currentDetail = { symbol, price: last };
-  $("detail-price").textContent = fmtMoney(last);
+  currentDetail = { symbol, price: last, currency };
+  $("detail-price").textContent = fmtMoney(last, currency);
+
+  if (currency !== "USD") {
+    $("detail-buy").classList.add("hidden");
+    $("detail-nobusd").classList.remove("hidden");
+  }
 
   const r1 = data.trailingReturn(d.bars, 30), r3 = data.trailingReturn(d.bars, 90), r12 = data.trailingReturn(d.bars, 365);
   $("detail-returns").innerHTML =
@@ -239,6 +309,110 @@ async function runCurrentBacktest() {
     `max drawdown ${fmtPct(s.maxDrawdown)}, annualized vol ${fmtPct(s.volatility)}, ${r.rebalances} rebalances.` +
     (r.benchStats ? ` Benchmark ${r.benchmarkSymbol} buy&hold CAGR ${fmtPct(r.benchStats.cagr)}, max DD ${fmtPct(r.benchStats.maxDrawdown)}.` : "") +
     ` Strategy JSON: ${JSON.stringify(strategy)}.`;
+}
+
+// =================== FACTOR COMPOSER ===================
+const composerEl = $("factor-composer");
+const fcFactorsEl = $("fc-factors");
+const fcExprEl = $("fc-expression");
+
+$("bt-new-factor").addEventListener("click", () => {
+  composerEl.classList.toggle("hidden");
+  if (!composerEl.classList.contains("hidden") && !fcFactorsEl.children.length) addFactorCard();
+});
+$("fc-cancel").addEventListener("click", () => composerEl.classList.add("hidden"));
+$("fc-add").addEventListener("click", addFactorCard);
+$("fc-save").addEventListener("click", () => saveFactorStrategy(false));
+$("fc-run").addEventListener("click", () => saveFactorStrategy(true));
+
+function addFactorCard(preset) {
+  const card = document.createElement("div");
+  card.className = "factor-card";
+  const f = preset || { factor: "momentum", weight: 0.5, direction: 1, params: { lookback_days: 252 } };
+  const opts = AVAILABLE_FACTORS.map(
+    (af) => `<option value="${af.id}" ${af.id === f.factor ? "selected" : ""}>${af.label}</option>`
+  ).join("");
+  card.innerHTML = `
+    <div class="factor-card-head">
+      <select class="fc-type">${opts}</select>
+      <button class="fc-dir" data-dir="${f.direction}">${f.direction === -1 ? "−" : "+"}</button>
+      <button class="fc-remove">×</button>
+    </div>
+    <div class="factor-card-body">
+      <label>Wt</label>
+      <input type="range" class="fc-weight-slider" min="1" max="100" value="${Math.round((f.weight || 0.5) * 100)}" />
+      <span class="fc-weight-val">${(f.weight || 0.5).toFixed(2)}</span>
+      <label>Days</label>
+      <input type="number" class="fc-lookback" value="${f.params?.lookback_days || 252}" min="5" max="1260" />
+    </div>
+    <div class="fc-factor-desc">${AVAILABLE_FACTORS.find((af) => af.id === f.factor)?.desc || ""}</div>`;
+  card.querySelector(".fc-dir").addEventListener("click", (e) => {
+    const btn = e.currentTarget;
+    const d = btn.dataset.dir === "1" ? -1 : 1;
+    btn.dataset.dir = String(d);
+    btn.textContent = d === -1 ? "−" : "+";
+    updateExpression();
+  });
+  card.querySelector(".fc-remove").addEventListener("click", () => { card.remove(); updateExpression(); });
+  card.querySelector(".fc-weight-slider").addEventListener("input", (e) => {
+    card.querySelector(".fc-weight-val").textContent = (e.target.value / 100).toFixed(2);
+    updateExpression();
+  });
+  card.querySelector(".fc-type").addEventListener("change", (e) => {
+    const af = AVAILABLE_FACTORS.find((a) => a.id === e.target.value);
+    card.querySelector(".fc-factor-desc").textContent = af?.desc || "";
+    card.querySelector(".fc-lookback").value = af?.defaultLookback || 252;
+    updateExpression();
+  });
+  card.querySelector(".fc-lookback").addEventListener("input", updateExpression);
+  fcFactorsEl.appendChild(card);
+  updateExpression();
+}
+
+function updateExpression() {
+  const parts = [];
+  for (const card of fcFactorsEl.children) {
+    const factor = card.querySelector(".fc-type").value;
+    const weight = (parseInt(card.querySelector(".fc-weight-slider").value, 10) / 100).toFixed(2);
+    const dir = card.querySelector(".fc-dir").dataset.dir;
+    const lookback = card.querySelector(".fc-lookback").value;
+    const af = AVAILABLE_FACTORS.find((a) => a.id === factor);
+    const sign = dir === "-1" ? " − " : (parts.length ? " + " : " ");
+    parts.push(`${sign}${weight}·z(${af?.short || factor}${lookback})`);
+  }
+  fcExprEl.textContent = parts.length ? `y =${parts.join("")}` : "Add factors above";
+}
+
+function buildFactorStrategy() {
+  const name = $("fc-name").value.trim() || `Factor Strategy ${Date.now() % 10000}`;
+  const universe = $("fc-universe").value.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
+  const factors = [];
+  for (const card of fcFactorsEl.children) {
+    factors.push({
+      factor: card.querySelector(".fc-type").value,
+      weight: parseInt(card.querySelector(".fc-weight-slider").value, 10) / 100,
+      direction: parseInt(card.querySelector(".fc-dir").dataset.dir, 10),
+      params: { lookback_days: parseInt(card.querySelector(".fc-lookback").value, 10) || 252 },
+    });
+  }
+  return {
+    name,
+    description: `Factor model: ${factors.map((f) => f.factor).join(", ")} over ${universe.join(", ")}.`,
+    universe,
+    safe_asset: $("fc-safe").value.trim().toUpperCase() || "CASH",
+    rebalance: $("fc-rebalance").value,
+    rule: { type: "factor_score", factors, combine: $("fc-combine").value },
+  };
+}
+
+function saveFactorStrategy(run) {
+  const strategy = buildFactorStrategy();
+  const v = validateStrategy(strategy);
+  if (!v.ok) { alert("Invalid: " + v.errors.join("; ")); return; }
+  saveStrategy(strategy);
+  composerEl.classList.add("hidden");
+  rebuildStrategySelect(strategy.name);
+  if (run) runCurrentBacktest();
 }
 
 // =================== MENTOR ===================

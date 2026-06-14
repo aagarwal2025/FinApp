@@ -19,11 +19,25 @@
     <main>
       <!-- ============ MARKETS ============ -->
       <section id="view-markets" class="view active">
-        <div class="search-row">
+        <div class="search-hero">
           <input id="ticker-search" type="search" inputmode="text" autocomplete="off"
-                 placeholder="Search ticker (e.g. VTI, AAPL)" />
+                 placeholder="Search any ticker (e.g. VTI, AAPL, RELIANCE.BO)" />
         </div>
         <ul id="search-results" class="ticker-list"></ul>
+
+        <div id="movers-section">
+          <h2 class="section-h">Today's Movers</h2>
+          <div id="movers-strip" class="movers-strip">
+            <span class="muted" style="padding:12px">Loading…</span>
+          </div>
+        </div>
+
+        <div id="exchange-tabs" class="exchange-tabs">
+          <button class="ex-tab active" data-exchange="US">US</button>
+          <button class="ex-tab" data-exchange="BSE">India (BSE)</button>
+          <button class="ex-tab" data-exchange="DFM">Dubai (DFM)</button>
+        </div>
+        <ul id="exchange-list" class="ticker-list"></ul>
 
         <div id="ticker-detail" class="card hidden">
           <div class="detail-head">
@@ -36,6 +50,7 @@
           <div id="chart-host" class="chart-host"></div>
           <div class="detail-actions">
             <button id="detail-buy" class="btn">Paper buy</button>
+            <p id="detail-nobusd" class="muted hidden" style="margin:8px 0 0">Paper trading available for USD tickers only.</p>
           </div>
         </div>
       </section>
@@ -62,8 +77,50 @@
             <label class="field-label" for="bt-start">Start year</label>
             <input id="bt-start" type="number" value="2008" min="1990" max="2030" />
           </div>
-          <button id="bt-run" class="btn">Run backtest</button>
+          <div class="field-row">
+            <button id="bt-run" class="btn" style="flex:1">Run backtest</button>
+            <button id="bt-new-factor" class="btn btn-accent" style="flex:1">+ Factor strategy</button>
+          </div>
         </div>
+
+        <div id="factor-composer" class="card hidden">
+          <h2 class="section-h" style="margin-top:0">Factor Strategy Builder</h2>
+          <div class="field-row">
+            <input id="fc-name" type="text" placeholder="Strategy name" />
+          </div>
+          <div class="field-row">
+            <input id="fc-universe" type="text" placeholder="Universe: VTI,VXUS,SPY,QQQ,GLD" value="VTI,VXUS,SPY,QQQ,GLD" />
+          </div>
+          <div class="fc-settings-row">
+            <div class="fc-setting">
+              <label class="field-label">Safe asset</label>
+              <input id="fc-safe" type="text" value="VGIT" />
+            </div>
+            <div class="fc-setting">
+              <label class="field-label">Rebalance</label>
+              <select id="fc-rebalance">
+                <option value="monthly">Monthly</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </div>
+            <div class="fc-setting">
+              <label class="field-label">Combine</label>
+              <select id="fc-combine">
+                <option value="rank_top1">Top 1</option>
+                <option value="score_weighted">Weighted</option>
+              </select>
+            </div>
+          </div>
+          <div id="fc-factors"></div>
+          <button id="fc-add" class="btn btn-quiet" style="width:100%;margin:8px 0">+ Add factor</button>
+          <div id="fc-expression" class="code-block" style="margin:10px 0;font-size:13px;min-height:1.4em"></div>
+          <div class="chat-buttons">
+            <button id="fc-save" class="btn">Save</button>
+            <button id="fc-run" class="btn btn-accent">Save & Run</button>
+            <button id="fc-cancel" class="btn btn-quiet">Cancel</button>
+          </div>
+        </div>
+
         <div id="bt-results"></div>
       </section>
 

@@ -22,6 +22,131 @@ function idxAt(data, t) {
   return asOfIndex(data.bars, t);
 }
 
+// ======================== FACTOR COMPUTATION ========================
+// Each returns a raw scalar for one asset at bar index i, or null if
+// insufficient data. Normalization happens cross-sectionally in decide().
+
+function lookbackIdx(bars, i, days) {
+  return asOfIndex(bars, bars[i].t - days * DAY);
+}
+
+function dailyReturns(bars, from, to) {
+  const r = [];
+  for (let k = from + 1; k <= to; k++) {
+    if (bars[k].c > 0 && bars[k - 1].c > 0) r.push(bars[k].c / bars[k - 1].c - 1);
+  }
+  return r;
+}
+
+function meanOf(arr) { return arr.reduce((a, b) => a + b, 0) / arr.length; }
+
+const FACTOR_FNS = {
+  momentum(bars, i, p) {
+    const j = lookbackIdx(bars, i, p.lookback_days);
+    if (j < 0 || j >= i || bars[j].c <= 0) return null;
+    return bars[i].c / bars[j].c - 1;
+  },
+
+  risk_adj_momentum(bars, i, p) {
+    const mom = FACTOR_FNS.momentum(bars, i, p);
+    if (mom == null) return null;
+    const j = lookbackIdx(bars, i, p.lookback_days);
+    const r = dailyReturns(bars, j, i);
+    if (r.length < 10) return null;
+    const m = meanOf(r);
+    const vol = Math.sqrt(r.reduce((a, b) => a + (b - m) ** 2, 0) / r.length) * Math.sqrt(252);
+    return vol > 0.001 ? mom / vol : null;
+  },
+
+  volatility(bars, i, p) {
+    const j = lookbackIdx(bars, i, p.lookback_days);
+    if (j < 0 || j >= i) return null;
+    const r = dailyReturns(bars, j, i);
+    if (r.length < 10) return null;
+    const m = meanOf(r);
+    return Math.sqrt(r.reduce((a, b) => a + (b - m) ** 2, 0) / r.length) * Math.sqrt(252);
+  },
+
+  trend_sma(bars, i, p) {
+    const window = Math.min(p.lookback_days, i + 1);
+    if (window < 5) return null;
+    let sum = 0;
+    for (let k = i - window + 1; k <= i; k++) sum += bars[k].c;
+    const sma = sum / window;
+    return sma > 0 ? bars[i].c / sma - 1 : null;
+  },
+
+  sma_cross(bars, i, p) {
+    const window = Math.min(p.lookback_days, i + 1);
+    if (window < 5) return null;
+    let sum = 0;
+    for (let k = i - window + 1; k <= i; k++) sum += bars[k].c;
+    return bars[i].c > sum / window ? 1 : -1;
+  },
+
+  mean_reversion(bars, i, p) {
+    const j = lookbackIdx(bars, i, p.lookback_days);
+    if (j < 0 || j >= i) return null;
+    const w = [];
+    for (let k = j; k <= i; k++) w.push(bars[k].c);
+    if (w.length < 10) return null;
+    const m = meanOf(w);
+    const std = Math.sqrt(w.reduce((a, b) => a + (b - m) ** 2, 0) / w.length);
+    return std > 0 ? -(bars[i].c - m) / std : null;
+  },
+
+  max_drawdown(bars, i, p) {
+    const j = lookbackIdx(bars, i, p.lookback_days);
+    if (j < 0 || j >= i) return null;
+    let peak = -Infinity, dd = 0;
+    for (let k = j; k <= i; k++) { peak = Math.max(peak, bars[k].c); dd = Math.min(dd, bars[k].c / peak - 1); }
+    return dd;
+  },
+
+  downside_dev(bars, i, p) {
+    const j = lookbackIdx(bars, i, p.lookback_days);
+    if (j < 0 || j >= i) return null;
+    const r = dailyReturns(bars, j, i);
+    if (r.length < 10) return null;
+    const sumSq = r.reduce((a, b) => a + (b < 0 ? b * b : 0), 0) / r.length;
+    return Math.sqrt(sumSq) * Math.sqrt(252);
+  },
+
+  high_52w(bars, i, p) {
+    const j = lookbackIdx(bars, i, p.lookback_days || 252);
+    if (j < 0 || j >= i) return null;
+    let high = -Infinity;
+    for (let k = j; k <= i; k++) high = Math.max(high, bars[k].c);
+    return high > 0 ? bars[i].c / high : null;
+  },
+
+  autocorrelation(bars, i, p) {
+    const j = lookbackIdx(bars, i, p.lookback_days);
+    if (j < 0 || j >= i) return null;
+    const r = dailyReturns(bars, j, i);
+    if (r.length < 20) return null;
+    const m = meanOf(r);
+    let num = 0, den = 0;
+    for (let k = 1; k < r.length; k++) { num += (r[k] - m) * (r[k - 1] - m); den += (r[k] - m) ** 2; }
+    return den > 0 ? num / den : null;
+  },
+};
+
+function zScoreNormalize(rawBySymbol) {
+  const valid = [];
+  for (const v of Object.values(rawBySymbol)) if (v != null && isFinite(v)) valid.push(v);
+  if (valid.length < 2) {
+    const out = {};
+    for (const s of Object.keys(rawBySymbol)) out[s] = 0;
+    return out;
+  }
+  const m = meanOf(valid);
+  const std = Math.sqrt(valid.reduce((a, b) => a + (b - m) ** 2, 0) / valid.length) || 1;
+  const out = {};
+  for (const [s, v] of Object.entries(rawBySymbol)) out[s] = v != null && isFinite(v) ? (v - m) / std : 0;
+  return out;
+}
+
 // Decide target weights {symbol: fraction} at time t. CASH allowed as a symbol.
 function decide(strategy, priceMap, t) {
   const rule = strategy.rule;
@@ -61,6 +186,47 @@ function decide(strategy, priceMap, t) {
     }
     if (best == null) return { [safe]: 1 };
     if (bestRet < 0 && rule.if_all_negative === "safe_asset") return { [safe]: 1 };
+    return { [best]: 1 };
+  }
+
+  if (rule.type === "factor_score") {
+    const universe = strategy.universe;
+    const zScores = rule.factors.map((f) => {
+      const fn = FACTOR_FNS[f.factor];
+      if (!fn) return Object.fromEntries(universe.map((s) => [s, 0]));
+      const raw = {};
+      for (const sym of universe) {
+        const d = priceMap.get(sym);
+        const idx = idxAt(d, t);
+        raw[sym] = idx >= 0 ? fn(d.bars, idx, f.params) : null;
+      }
+      return zScoreNormalize(raw);
+    });
+
+    const composite = {};
+    for (const sym of universe) {
+      let y = 0;
+      for (let fi = 0; fi < rule.factors.length; fi++) {
+        y += (rule.factors[fi].weight || 0) * (rule.factors[fi].direction || 1) * (zScores[fi][sym] || 0);
+      }
+      composite[sym] = y;
+    }
+
+    if (rule.combine === "score_weighted") {
+      const positive = Object.entries(composite).filter(([, s]) => s > 0);
+      if (!positive.length) return { [safe]: 1 };
+      const total = positive.reduce((a, [, s]) => a + s, 0);
+      const w = {};
+      for (const [sym, s] of positive) w[sym] = s / total;
+      return w;
+    }
+
+    // rank_top1 (default)
+    let best = null, bestScore = -Infinity;
+    for (const [sym, s] of Object.entries(composite)) {
+      if (s > bestScore) { bestScore = s; best = sym; }
+    }
+    if (best == null || Object.values(composite).every((s) => s < 0)) return { [safe]: 1 };
     return { [best]: 1 };
   }
 
