@@ -109,6 +109,12 @@ table.data th { color: var(--muted); font-weight: 600; font-size: 12px; }
 .stat .value { font-size: 19px; font-weight: 700; }
 
 /* mentor chat */
+.credits-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  font-size: 13px; padding: 8px 10px; margin-bottom: 10px;
+  background: #f4f1ea; border: 1px solid var(--line); border-radius: 8px;
+}
+.credits-bar .btn { font-size: 12px; padding: 6px 10px; }
 .chat-log { display: flex; flex-direction: column; gap: 10px; min-height: 40vh; }
 .msg { padding: 10px 12px; border-radius: 12px; max-width: 88%; white-space: pre-wrap;
   word-wrap: break-word; font-size: 15px; }

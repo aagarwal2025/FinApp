@@ -52,6 +52,8 @@ A strategy is the JSON contract in [`public/js/strategy.js`](public/js/strategy.
 
 Everything is free except Anthropic API usage: prepaid, ~$5 minimum, roughly 3–4¢ per Opus 4.8 mentor turn. Data endpoints and hosting are keyless/free.
 
+The Mentor tab shows an **estimated** remaining balance: it prices the exact token `usage` returned by each call at Opus 4.8 rates and subtracts from a baseline you enter. There is no Anthropic API for the real dollar balance — that lives at console.anthropic.com → Billing. Tap **Set balance** to re-sync the estimate to the Console's real number anytime.
+
 ## Disclaimer
 
 Educational tool. Hypothetical backtests assume frictionless EOD-close fills and are not predictive. Not financial advice.

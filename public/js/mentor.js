@@ -3,6 +3,7 @@
 // runnable strategy card from the structured-JSON reply.
 
 import { STRATEGY_SCHEMA } from "./strategy.js";
+import * as credits from "./credits.js";
 
 const PIN_KEY = "finapp.mentorPin";
 let pin = localStorage.getItem(PIN_KEY) || "";
@@ -10,7 +11,7 @@ let history = []; // [{role, content}]
 let busy = false;
 let cfg = {}; // { onStrategy(strategy), getContext() }
 
-let logEl, textEl, sendBtn, proposeBtn, pinWrap, pinInput, pinSaveBtn;
+let logEl, textEl, sendBtn, proposeBtn, pinWrap, pinInput, pinSaveBtn, creditsEl;
 
 export function initMentor(config) {
   cfg = config || {};
@@ -21,6 +22,8 @@ export function initMentor(config) {
   pinWrap = document.getElementById("mentor-pin-setup");
   pinInput = document.getElementById("mentor-pin");
   pinSaveBtn = document.getElementById("mentor-pin-save");
+  creditsEl = document.getElementById("mentor-credits");
+  credits.render(creditsEl);
 
   pinSaveBtn.addEventListener("click", () => {
     pin = pinInput.value.trim();
@@ -84,15 +87,18 @@ async function send(mode) {
     if (!resp.ok || resp.headers.get("content-type")?.includes("application/json")) {
       const err = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
       if (mode === "chat" && err.ok === false) { sys("⚠ " + err.error); }
-      else if (mode === "propose" && err.ok === true) { renderStrategy(err.strategy); }
-      else sys("⚠ " + (err.error || "request failed"));
+      else if (mode === "propose" && err.ok === true) {
+        renderStrategy(err.strategy);
+        if (err.usage) { credits.addUsage(err.usage); credits.render(creditsEl); }
+      } else sys("⚠ " + (err.error || "request failed"));
       if (resp.status === 401) pinWrap.classList.remove("hidden");
       setBusy(false);
       return;
     }
 
     // chat: stream the Anthropic SSE
-    await streamChat(resp);
+    const usage = await streamChat(resp);
+    if (usage) { credits.addUsage(usage); credits.render(creditsEl); }
   } catch (e) {
     sys("⚠ Network error reaching the mentor.");
   } finally {
@@ -108,7 +114,7 @@ async function streamChat(resp) {
 
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
-  let buffer = "", acc = "";
+  let buffer = "", acc = "", usage = null;
 
   const flush = () => {
     bot.textContent = acc; // replaces spinner once text arrives
@@ -131,6 +137,10 @@ async function streamChat(resp) {
       if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") {
         acc += ev.delta.text;
         flush();
+      } else if (ev.type === "message_start" && ev.message?.usage) {
+        usage = { ...ev.message.usage }; // input + cache token counts
+      } else if (ev.type === "message_delta" && ev.usage) {
+        usage = { ...(usage || {}), ...ev.usage }; // final cumulative output_tokens
       } else if (ev.type === "error") {
         acc += `\n⚠ ${ev.error?.message || "stream error"}`;
         flush();
@@ -139,6 +149,7 @@ async function streamChat(resp) {
   }
   if (!acc) bot.textContent = "(no response)";
   history.push({ role: "assistant", content: acc });
+  return usage;
 }
 
 function renderStrategy(strategy) {

@@ -134,7 +134,7 @@ export async function onRequestPost({ request, env }) {
     const textBlock = (data.content || []).find((b) => b.type === "text");
     if (!textBlock) return json({ ok: false, error: "model returned no strategy" }, 502);
     const strategy = JSON.parse(textBlock.text);
-    return json({ ok: true, strategy });
+    return json({ ok: true, strategy, usage: data.usage });
   } catch (e) {
     return json({ ok: false, error: "could not parse strategy JSON from model" }, 502);
   }
