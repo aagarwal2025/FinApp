@@ -1,14 +1,17 @@
-name = "finapp"
-pages_build_output_dir = "public"
+name = "fin-app"
+main = "src/index.js"
 compatibility_date = "2026-06-01"
 
-# Cloudflare Pages serves everything in /public as static assets and
-# auto-discovers serverless endpoints in /functions. No build command needed.
+# Workers Static Assets model: everything in /public is served as static files;
+# this Worker (src/index.js) runs only for /api/* (see run_worker_first), which
+# holds the prices/tickers/mentor endpoints. Deploy command: `npx wrangler deploy`.
 #
-# Secrets (set in the Cloudflare dashboard → Settings → Environment variables,
-# or `wrangler pages secret put NAME` if you install Node + wrangler locally):
-#   ANTHROPIC_API_KEY   – your prepaid Anthropic API key (holds the mentor)
-#   MENTOR_PIN          – a short passphrase the app sends to gate /api/mentor
-#
-# Local dev (optional, needs Node + `npm i -g wrangler`):
-#   wrangler pages dev public     # reads secrets from .dev.vars
+# `name` must match the Cloudflare project ("fin-app"). Secrets (dashboard →
+# the Worker → Settings → Variables and Secrets, add as Secret, then redeploy):
+#   ANTHROPIC_API_KEY   – your prepaid Anthropic key (holds the mentor)
+#   MENTOR_PIN          – passphrase the app sends to gate /api/mentor
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]

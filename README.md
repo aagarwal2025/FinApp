@@ -6,36 +6,37 @@ Built as a sibling to [Fin](../Fin) — same disciplines (config-as-data, gracef
 
 ## Architecture ($0 except API credits)
 
+Deployed on **Cloudflare Workers** using the Static Assets model (Pages is in maintenance mode; Workers is the recommended path for new projects).
+
 ```
-Private repo aagarwal2025/FinApp ── auto-deploy ──▶ Cloudflare Pages (free, HTTPS)
-  public/                  static PWA (installable on Android, offline shell)
-  functions/api/
-    prices/[symbol].js     Yahoo chart API → Stooq fallback, edge-cached ~24h
-    tickers.js             rreichel3/US-Stock-Symbols universe, edge-cached
-    mentor.js              Claude Opus 4.8 (chat stream + structured strategy JSON)
-  client state             paper portfolio + saved strategies in localStorage
+Private repo aagarwal2025/FinApp ── auto-deploy ──▶ Cloudflare Worker "fin-app" (free, HTTPS)
+  public/         static PWA (installable on Android, offline shell) — served as static assets
+  src/index.js    the Worker — runs only for /api/* (run_worker_first):
+                    GET  /api/prices/:symbol  Yahoo chart API → Stooq fallback, edge-cached ~24h
+                    GET  /api/tickers         rreichel3/US-Stock-Symbols universe, edge-cached
+                    POST /api/mentor          Claude Opus 4.8 (chat stream + structured strategy JSON)
+  client state    paper portfolio + saved strategies in localStorage
 ```
 
-No build step, no framework — vanilla ES modules. Cloudflare builds/serves in the cloud, so **no local Node toolchain is required to deploy**.
+No bundler, no framework — vanilla ES modules + a single Worker entry. `wrangler` (run by Cloudflare's cloud build) uploads `public/` and deploys the Worker in one step, so **no local Node toolchain is required to deploy**.
 
 ## Deploy (one-time)
 
 1. **Push this repo** to `github.com/aagarwal2025/FinApp` (private).
-2. In the **Cloudflare dashboard** → Workers & Pages → **Create → Pages → Connect to Git** → pick `FinApp`.
-   - Framework preset: **None**
-   - Build command: *(leave empty)*
-   - Build output directory: **`public`**
-3. After the first deploy, set two **secrets** (Settings → Variables and Secrets → add as *Secret*, then redeploy):
-   - `ANTHROPIC_API_KEY` — your prepaid Anthropic key ([console.anthropic.com](https://console.anthropic.com), Billing → buy ~$5 credits)
+2. Cloudflare dashboard → Workers & Pages → **Import a repository** → pick the repo. It creates a Worker (named **`fin-app`** — must match `name` in `wrangler.toml`).
+   - **Deploy command:** `npx wrangler deploy` (the default — leave it).
+   - Build command: *(none needed)*. The `wrangler.toml` declares `[assets] directory = "./public"` and `run_worker_first = ["/api/*"]`, so `wrangler deploy` uploads the static site and deploys the Worker together.
+3. After the first deploy, set two **secrets** (the Worker → Settings → Variables and Secrets → add as *Secret*, then redeploy):
+   - `ANTHROPIC_API_KEY` — your prepaid Anthropic key ([console.anthropic.com](https://console.anthropic.com), Billing → buy credits)
    - `MENTOR_PIN` — any passphrase; you'll enter it once in the app to unlock the mentor
-4. Open the deployed URL on your Android phone → browser menu → **Add to Home Screen**.
+4. Open the deployed `*.workers.dev` URL on your Android phone → browser menu → **Add to Home Screen**.
 
 ## Local dev (optional, needs Node + wrangler)
 
 ```bash
 npm install -g wrangler
 cp .dev.vars.example .dev.vars   # fill in ANTHROPIC_API_KEY + MENTOR_PIN
-wrangler pages dev public        # serves the site and /functions locally
+wrangler dev                     # serves public/ + src/index.js locally
 ```
 
 Without Node, just push and use Cloudflare's automatic **preview deployments** as the test loop.
