@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1f3a5f" />
+    <title>FinApp</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="stylesheet" href="/css/app.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 id="view-title">Markets</h1>
+      <span class="topbar-note" id="topbar-note"></span>
+    </header>
+
+    <main>
+      <!-- ============ MARKETS ============ -->
+      <section id="view-markets" class="view active">
+        <div class="search-row">
+          <input id="ticker-search" type="search" inputmode="text" autocomplete="off"
+                 placeholder="Search ticker (e.g. VTI, AAPL)" />
+        </div>
+        <ul id="search-results" class="ticker-list"></ul>
+
+        <div id="ticker-detail" class="card hidden">
+          <div class="detail-head">
+            <div>
+              <span id="detail-symbol" class="detail-symbol"></span>
+              <span id="detail-price" class="detail-price"></span>
+            </div>
+            <div id="detail-returns" class="detail-returns"></div>
+          </div>
+          <div id="chart-host" class="chart-host"></div>
+          <div class="detail-actions">
+            <button id="detail-buy" class="btn">Paper buy</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ PORTFOLIO ============ -->
+      <section id="view-portfolio" class="view">
+        <div class="card summary" id="pf-summary"></div>
+        <h2 class="section-h">Holdings</h2>
+        <div id="pf-holdings"></div>
+        <h2 class="section-h">Activity</h2>
+        <div id="pf-activity"></div>
+        <div class="card">
+          <button id="pf-reset" class="btn btn-quiet">Reset paper account</button>
+        </div>
+      </section>
+
+      <!-- ============ BACKTEST ============ -->
+      <section id="view-backtest" class="view">
+        <div class="card">
+          <label class="field-label" for="bt-strategy">Strategy</label>
+          <select id="bt-strategy"></select>
+          <pre id="bt-strategy-json" class="code-block"></pre>
+          <div class="field-row">
+            <label class="field-label" for="bt-start">Start year</label>
+            <input id="bt-start" type="number" value="2008" min="1990" max="2030" />
+          </div>
+          <button id="bt-run" class="btn">Run backtest</button>
+        </div>
+        <div id="bt-results"></div>
+      </section>
+
+      <!-- ============ MENTOR ============ -->
+      <section id="view-mentor" class="view">
+        <div id="mentor-pin-setup" class="card hidden">
+          <p class="muted">Enter the mentor passphrase (the <code>MENTOR_PIN</code> you set in
+            Cloudflare). Stored only on this device.</p>
+          <div class="field-row">
+            <input id="mentor-pin" type="password" placeholder="passphrase" />
+            <button id="mentor-pin-save" class="btn">Save</button>
+          </div>
+        </div>
+        <div id="mentor-log" class="chat-log"></div>
+        <div class="chat-input">
+          <textarea id="mentor-text" rows="2"
+                    placeholder="Ask about a strategy, or describe one to build…"></textarea>
+          <div class="chat-buttons">
+            <button id="mentor-send" class="btn">Ask</button>
+            <button id="mentor-propose" class="btn btn-accent">Propose strategy →</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="tabbar">
+      <button class="tab active" data-view="markets">Markets</button>
+      <button class="tab" data-view="portfolio">Portfolio</button>
+      <button class="tab" data-view="backtest">Backtest</button>
+      <button class="tab" data-view="mentor">Mentor</button>
+    </nav>
+
+    <script type="module" src="/js/app.js"></script>
+  </body>
+</html>

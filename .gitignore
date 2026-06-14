@@ -1,0 +1,17 @@
+# Secrets — never commit. Resolved file-first (.dev.vars) then Cloudflare secret.
+.dev.vars
+*.local
+.env
+
+# Node (only if a local toolchain is added later; deploy builds in Cloudflare's cloud)
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# Wrangler / local dev
+.wrangler/
+.mf/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,4 @@
+# Copy to `.dev.vars` for local `wrangler pages dev` (gitignored).
+# In production these are set as Cloudflare Pages encrypted secrets instead.
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+MENTOR_PIN=pick-a-passphrase

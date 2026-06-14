@@ -1,0 +1,15 @@
+{
+  "name": "FinApp — Paper Trading & Strategy Lab",
+  "short_name": "FinApp",
+  "description": "Backtest rule-based strategies, paper-trade on EOD data, and learn quant trading with an AI mentor.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf8f3",
+  "theme_color": "#1f3a5f",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
