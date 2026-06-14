@@ -9,8 +9,10 @@
 const KEY = "finapp.credits.v1";
 
 // Opus 4.8 pricing, $ per 1M tokens (input $5 / output $25; cache write 1.25x,
-// cache read 0.1x). Keep in sync with console.anthropic.com pricing.
+// cache read 0.1x). Web search is billed separately at $0.01 per request.
+// Keep in sync with console.anthropic.com pricing.
 const PRICE = { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 };
+const WEB_SEARCH = 0.01; // $ per web_search request (server tool)
 
 function load() {
   try {
@@ -24,12 +26,14 @@ const save = (s) => localStorage.setItem(KEY, JSON.stringify(s));
 // Dollar cost of one Anthropic `usage` object.
 export function costOf(u) {
   if (!u) return 0;
-  return (
+  const tokenCost = (
     (u.input_tokens || 0) * PRICE.input +
     (u.output_tokens || 0) * PRICE.output +
     (u.cache_creation_input_tokens || 0) * PRICE.cacheWrite +
     (u.cache_read_input_tokens || 0) * PRICE.cacheRead
   ) / 1e6;
+  const searchCost = (u.server_tool_use?.web_search_requests || 0) * WEB_SEARCH;
+  return tokenCost + searchCost;
 }
 
 export function addUsage(u) {

@@ -114,7 +114,7 @@ async function streamChat(resp) {
 
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
-  let buffer = "", acc = "", usage = null;
+  let buffer = "", acc = "", usage = null, searchNote = null;
 
   const flush = () => {
     bot.textContent = acc; // replaces spinner once text arrives
@@ -135,8 +135,12 @@ async function streamChat(resp) {
       let ev;
       try { ev = JSON.parse(payload); } catch { continue; }
       if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") {
+        if (searchNote) { searchNote.remove(); searchNote = null; }
         acc += ev.delta.text;
         flush();
+      } else if (ev.type === "content_block_start" &&
+                 (ev.content_block?.type === "server_tool_use" || ev.content_block?.type === "web_search_tool_result")) {
+        if (!searchNote) searchNote = addMsg("sys", "🔍 Searching the web…");
       } else if (ev.type === "message_start" && ev.message?.usage) {
         usage = { ...ev.message.usage }; // input + cache token counts
       } else if (ev.type === "message_delta" && ev.usage) {
@@ -147,6 +151,7 @@ async function streamChat(resp) {
       }
     }
   }
+  if (searchNote) searchNote.remove();
   if (!acc) bot.textContent = "(no response)";
   history.push({ role: "assistant", content: acc });
   return usage;

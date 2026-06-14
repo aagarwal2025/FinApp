@@ -156,7 +156,9 @@ FinApp can backtest and paper-trade strategies of this exact shape:
   - sma_cross { asset, sma_days } — hold asset while above its N-day moving average, else safe_asset
   - buy_and_hold { weights?: [{symbol, weight}] } — static allocation, rebalanced
 
-When the user asks how to express an idea, describe it in those terms so they can build it here.`;
+When the user asks how to express an idea, describe it in those terms so they can build it here.
+
+You can search the web. Use it for things that change — current prices/quotes, recent market events, or a fund's current holdings/yield — and say when you've searched. For timeless concepts (how momentum works, math, definitions, or analyzing data already provided), answer directly without searching.`;
 
 function prepMessages(messages) {
   const clean = (messages || [])
@@ -201,6 +203,14 @@ async function handleMentor(request, env) {
   } else {
     payload.output_config = { effort: "medium" };
     payload.stream = true;
+    // Web search (server-side). code_execution enables dynamic filtering, which
+    // trims result tokens — and is free when paired with web search. max_uses
+    // bounds the per-turn search fee ($0.01/search). Claude only searches when
+    // the question needs current data (steered in SYSTEM).
+    payload.tools = [
+      { type: "web_search_20260209", name: "web_search", max_uses: 3 },
+      { type: "code_execution_20260120", name: "code_execution" },
+    ];
   }
 
   let upstream;
