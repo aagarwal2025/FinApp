@@ -31,6 +31,7 @@ export async function renderDaily() {
   const latest = $("daily-latest");
   const holdings = $("daily-holdings");
   const log = $("daily-log");
+  const playbook = $("daily-playbook");
 
   summary.innerHTML = '<span class="spinner"></span>';
   asof.textContent = "";
@@ -38,6 +39,7 @@ export async function renderDaily() {
   latest.innerHTML = "";
   holdings.innerHTML = "";
   log.innerHTML = "";
+  playbook.innerHTML = "";
 
   const run = await fetchRun();
   if (!run.ok) {
@@ -69,6 +71,10 @@ export async function renderDaily() {
     <div class="kv">Total return<b class="${signClass(totalReturn)}">${fmtPct(totalReturn)}</b></div>
     <div class="kv">Start<b>${fmtMoney(startCash)}</b></div>
     <div class="kv">Strategy<b>${esc(today.strategy || "—")}</b></div>`;
+
+  playbook.innerHTML = run.playbook
+    ? `<h2 class="section-h">Claude's playbook</h2><div class="daily-playbook-box">${esc(run.playbook)}</div>`
+    : "";
 
   const points = (run.equity_curve || []).filter((p) => p && isFinite(p.v));
   if (points.length > 1) {

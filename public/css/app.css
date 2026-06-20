@@ -196,6 +196,11 @@ table.data th { color: var(--muted); font-weight: 600; font-size: 12px; }
   padding: 10px 12px; margin: 0 0 12px 0;
 }
 .daily-asof { margin: 0 0 10px 2px; }
+.daily-playbook-box {
+  white-space: pre-wrap; font-size: 14px; line-height: 1.5;
+  background: #f4f1ea; border: 1px solid var(--line); border-radius: 8px;
+  padding: 12px; color: var(--ink); margin-bottom: 4px;
+}
 .daily-commentary {
   font-size: 15px; line-height: 1.5; margin: 10px 0 0 0;
   padding: 10px 12px; background: #fff; border-left: 3px solid var(--navy); border-radius: 4px;
