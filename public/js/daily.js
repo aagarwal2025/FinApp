@@ -1,7 +1,8 @@
 // daily.js — "Claude's Desk": read-only view of the discretionary paper account
-// that the daily Claude Code routine commits to public/data/paper-run.json.
-// Decisions are Claude's own judgment (non-reproducible); we render the committed
-// artifact only and never fabricate numbers — same graceful-degradation discipline
+// the daily Claude Code routine maintains. The routine writes the ledger to
+// Cloudflare D1 (via the Cloudflare MCP connector); we fetch it from /api/paper-run.
+// Decisions are Claude's own judgment (non-reproducible); we render the stored
+// ledger only and never fabricate numbers — same graceful-degradation discipline
 // as the rest of the app.
 
 import { fmtMoney, fmtPct, signClass } from "./data.js";

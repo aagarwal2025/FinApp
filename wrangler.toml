@@ -6,7 +6,7 @@ compatibility_date = "2026-06-01"
 # this Worker (src/index.js) runs only for /api/* (see run_worker_first), which
 # holds the prices/tickers/mentor endpoints. Deploy command: `npx wrangler deploy`.
 #
-# `name` must match the Cloudflare project ("fin-app"). Secrets (dashboard →
+# `name` must match the Cloudflare project ("finapp"). Secrets (dashboard →
 # the Worker → Settings → Variables and Secrets, add as Secret, then redeploy):
 #   ANTHROPIC_API_KEY   – your prepaid Anthropic key (holds the mentor)
 #   MENTOR_PIN          – passphrase the app sends to gate /api/mentor

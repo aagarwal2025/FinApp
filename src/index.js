@@ -3,6 +3,8 @@
 // /api/* (see run_worker_first in wrangler.toml). Routes:
 //   GET  /api/prices/:symbol  → normalized daily adjusted-close history
 //   GET  /api/tickers         → US ticker universe for client-side search
+//   GET  /api/movers          → top gainers/losers over a popular-stock watchlist
+//   GET  /api/paper-run       → Claude's Desk ledger (read from D1, seed-file fallback)
 //   POST /api/mentor          → Claude Opus 4.8 mentor (chat stream + propose JSON)
 // Never throws to the client — returns {ok:false, ...} so the UI shows a
 // placeholder, not fake data (Fin's graceful-degradation discipline).

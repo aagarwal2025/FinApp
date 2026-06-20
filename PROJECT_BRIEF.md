@@ -1,12 +1,11 @@
 # FinApp — Knowledge Handoff & Project Brief
 
-> **Purpose of this document.** It does two things:
-> 1. **Part 1** extracts the durable, high-level knowledge from the chat that built
->    the **Fin** weekly-report project — so that knowledge survives even after that
->    chat is deleted.
-> 2. **Part 2** is the forward-looking brief for **FinApp**, a tangential new project:
->    a phone-accessible way to **paper-trade strategies**, built web-first, on free
->    data and free tooling.
+> **Purpose of this document.** A self-contained knowledge handoff:
+> 1. **Part 1** — durable knowledge from the **Fin** weekly-report project (the sibling).
+> 2. **Part 2** — the *original* forward-looking brief for **FinApp** (pre-build; the actual build
+>    diverged — see Parts 3–4 for what shipped).
+> 3. **Part 3** — the v1→V5 build handoff + operational lessons (Markets / Portfolio / Backtest / Mentor).
+> 4. **Part 4** — **Claude's Desk** retro: the daily autonomous AI paper-trader on Cloudflare D1.
 >
 > Written as a self-contained handoff for an **Opus 4.8 High** reviewer agent. It
 > assumes no access to the original chat. Audience: the user (an aspiring quant,
@@ -277,21 +276,13 @@ serves it; simulation runs client-side.
 
 Then iterate: bigger universe, more strategies, Alpaca integration, sync.
 
-## 2.6 Open questions for the user / reviewer
+## 2.6 Open questions (all resolved during the build)
 
-1. **"Paper-trade strategies" — which emphasis for v1?**
-   (a) *Backtester* (run a strategy over history, see results), (b) *forward paper
-   trading* (daily EOD-marked simulated portfolio), or (c) *manual* paper
-   portfolio tracking. (Recommendation: a+b, since that matches the quant goal.)
-2. **Build the sim engine vs. use Alpaca's paper API?** (Recommendation: build it
-   for v1 learning; keep Alpaca as a fast-follow option.)
-3. **Universe size for v1?** Small (S&P 500, tiny bundle) vs. large (full Stooq,
-   needs lazy loading). (Recommendation: start S&P 500.)
-4. **Language for strategy logic:** JS in-browser (simplest for a pure-static PWA)
-   vs. Python in the GH Action precomputing results (reuses existing skills).
-   (Recommendation: Python precompute for heavy backtests, JS for interactive
-   paper trades.)
-5. **Repo:** new private GitHub repo `FinApp` under `aagarwal2025`?
+These pre-build questions were all answered as the app was built: v1 shipped **both a backtester
+and forward paper trading**; the **sim engine was built in JS** (not Alpaca); the universe is
+**on-demand, no bundle** (the nightly GH Action was dropped — see Part 3); strategy logic is **JS
+in-browser**; the repo is the private `aagarwal2025/FinApp`. Later, **Claude's Desk** added a third
+mode — a fully autonomous AI trader (Part 4).
 
 ## 2.7 Sources
 
@@ -314,7 +305,7 @@ Then iterate: bigger universe, more strategies, Alpaca integration, sync.
 
 > Written as a self-contained handoff for a tenured staff-engineer reviewer. Captures what was actually built, the operational lessons from the build/deploy work, and a critiqued v5 roadmap. v6 (SnapTrade) is **shelved** but recorded.
 
-## 3.1 Status — what shipped (HEAD `00a1475 "V5"`)
+## 3.1 Status — what shipped at V5 (HEAD `00a1475`; v5a/v5b and Claude's Desk shipped later — see Part 4)
 
 Live as a Cloudflare **Worker** named `finapp` (Workers **Static Assets** model — *not* Pages), repo `aagarwal2025/FinApp`. Architecture diverged from Part 2's plan in two deliberate ways: **no bulk data** (all market data pulled on demand via an edge-cached Worker proxy — Yahoo chart API primary, Stooq fallback; the nightly GitHub Action was dropped), and an **in-app Claude mentor** (Opus 4.8) that explains concepts and emits runnable strategies. No build step, no framework, no npm dependencies — vanilla ES modules + one Worker entry `src/index.js` routing `/api/{prices,tickers,mentor}`; everything else is static from `public/`.
 
@@ -330,6 +321,11 @@ Working surfaces: **Markets** (search, price chart, trailing returns), **Portfol
 - **Fin disciplines that paid off.** Graceful degradation (every `/api` endpoint returns `{ok:false, reason}` rather than throwing; the UI renders placeholders, never fake `$0`); honest labeling (paper fills "simulated at EOD close"; backtests "hypothetical"); config-as-data (the strategy schema is the single source of truth).
 
 ## 3.3 v5 roadmap with staff-engineer critique
+
+> **STATUS (2026-06-20):** **v5a and v5b have shipped** (Markets landing + non-US browse; the
+> factor-score builder with 10 price factors + z-score normalization). **v6 (SnapTrade) remains
+> shelved.** **v7 hardening** (Node + wrangler + a JS test harness for the money math) is still
+> open. The detail below is kept as the design rationale for what was built.
 
 v5 is split; v6 is shelved. Recommended sequence: **v5a → hardening → v5b.**
 
@@ -347,3 +343,84 @@ v5 is split; v6 is shelved. Recommended sequence: **v5a → hardening → v5b.**
 - Yahoo exchange suffixes (DFM `.AE`, BSE `.BO`) — https://finance.yahoo.com/quote/DFM.AE/ , https://help.yahoo.com/kb/SLN2310.html
 - Cloudflare Workers Static Assets / migrate from Pages — https://developers.cloudflare.com/workers/static-assets/ , https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/
 - Cloudflare Workers secrets vs vars (`keep_vars`) — https://developers.cloudflare.com/workers/configuration/secrets/ , https://developers.cloudflare.com/workers/wrangler/configuration/
+
+---
+
+# Part 4 — Claude's Desk Retro (the daily autonomous AI paper-trader)
+
+> Added 2026-06-20. The biggest new surface since V5: a tab where **Claude itself** runs a
+> discretionary paper-trading account daily, with full autonomy and cross-run memory. Written as a
+> retro — what we set out to build, the walls we hit, the pivot, and the durable lessons.
+
+## 4.1 What it is
+
+A 5th tab ("Desk") showing a $10,000 simulated account that a scheduled **Claude Code routine**
+(`trig_01QceuTTwJTCfsx7n7z6DJJ2`, cron `0 22 * * 1-5` UTC, model `claude-sonnet-4-6`) runs each
+weekday after the US close. The routine has **full discretion**: it picks the strategy, decides
+trades, marks to the latest EOD close, and saves a JSON ledger. It maintains a self-authored
+**playbook** — its evolving trading philosophy — so each cold-start run inherits the last one's
+thinking. The user steers lightly via an editable **Mandate** (in `routines/daily-paper-trader.md`);
+the playbook is the routine's own voice. Honest labeling throughout: simulated, EOD fills,
+non-reproducible by design, not advice.
+
+Flow: **routine → WebSearch (prices) → Cloudflare MCP → D1 → Worker `/api/paper-run` → PWA.**
+
+## 4.2 The intended design vs. what we built
+
+The plan (chosen with the user up front) was the **Fin pattern**: the routine commits a
+`paper-run.json` to the repo and Cloudflare redeploys — "scheduled writer → static artifact → it
+always ships," minus the email. That is *not* what shipped, because of two walls the cloud routine
+hit, neither visible until the first real run:
+
+1. **It cannot push to the repo.** The user added a branch **ruleset** to `main`
+   (`update`/`deletion`/`non_fast_forward`, all branches). The routine pushes via a **GitHub-App /
+   user-to-server token**, and GitHub evaluates ruleset bypass by the **app identity, not the user's
+   role** — so even after granting the app write permission *and* with the user being a repo admin,
+   the push stayed blocked (`Permission ... denied` / `Resource not accessible by integration`).
+   Admin-role bypass does not extend to app tokens. (A user **PAT** would bypass — the road not
+   taken.)
+2. **Its cloud sandbox blocks direct network egress.** Yahoo, Stooq, *and even the app's own Worker
+   URL* all returned `403 / host_not_allowed` — only **WebSearch** and **MCP connectors** work.
+
+So both halves of the Fin pattern (fetch prices, write the artifact) were closed off. The pivot:
+**store the ledger in Cloudflare D1**, written via the **Cloudflare MCP connector**
+(`d1_database_query`) — the one durable store the routine can actually reach — and source prices via
+**cross-verified WebSearch**. The Worker reads D1 for `/api/paper-run` (seed-file fallback before
+the first write); the front end (`daily.js`) didn't change.
+
+**Why D1 specifically:** of the connected Cloudflare MCP tools, only D1 exposes a data write
+(`d1_database_query` runs arbitrary SQL); the KV/R2 tools only manage namespaces/buckets, not
+values. So D1 was the *only* writable option through the channel that works.
+
+## 4.3 Hard-won operational lessons (durable)
+
+- **Ruleset bypass is keyed to the actor's identity type.** Repo-admin bypass covers *your* PAT/
+  OAuth pushes (`gh auth token` + `http.extraheader` — every `main` deploy here uses that and logs
+  "Bypassed rule violations"), but **not** a GitHub App's token. If an automated agent must write a
+  ruleset-locked repo, put *its* app/deploy-key on the bypass list or hand it a user PAT — write
+  permission alone is not enough.
+- **A scheduled cloud agent's only reliable I/O is WebSearch + its MCP connectors.** Design its
+  persistence and data access around those, not git or arbitrary HTTP. MCP connectors also kept
+  getting silently dropped from the routine config — **re-attach + re-verify on every update.**
+- **`allowed_tools` vs MCP:** omitting `allowed_tools` in the routine's `session_context` falls back
+  to the broad default preset, which (with the connector attached) lets the agent call the MCP
+  tools. Explicitly listing built-ins *without* the MCP tools silently blocks them.
+- **A phantom submodule gitlink breaks Cloudflare's clone.** A `.claude/worktrees/...` dir got
+  `git add`-ed as a mode-160000 gitlink; Cloudflare's `git submodule update` then failed the build
+  ("error updating submodules"). Fix: `git rm --cached` it and `.gitignore` `.claude/worktrees/`.
+- **A build can fail on a *non-production* branch** while prod is fine — check *which ref* the
+  failing Cloudflare build is building before assuming prod broke.
+- **Fin disciplines held:** graceful degradation (Worker falls back to the seed; `/api/*` returns
+  `{ok:false}`), honest labeling (the routine flags WebSearch-sourced prices as methodology and
+  skipped GLD/BIL one run when two sources disagreed — never fabricated), and the deterministic
+  bookkeeping mirrors `portfolio.js` exactly (each run self-checks `value ≈ cash + Σ shares×mark`,
+  `cash ≥ 0`).
+
+## 4.4 State at handoff
+
+Live and verified (first real runs 2026-06-20). The routine reads/writes D1, maintains its playbook,
+and the Desk tab renders summary + playbook + equity curve + holdings + a Daily ledger table. D1:
+`finapp-desk`, table `ledger(id, doc, updated_at)`, JSON blob at `id=1`. Open follow-ups: the equity
+curve needs ≥2 runs to draw; the in-session `PushNotification` tool isn't provisioned (the routine's
+platform-level push is enabled instead); **v7 hardening** (a JS test harness for the money math) is
+still the highest-value next step. Full operational detail + IDs in user memory `claude-desk-d1`.
