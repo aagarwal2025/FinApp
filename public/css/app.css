@@ -189,10 +189,31 @@ table.data th { color: var(--muted); font-weight: 600; font-size: 12px; }
 .fc-lookback { width: 64px !important; font-size: 13px; padding: 5px 6px; text-align: center; }
 .fc-factor-desc { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
+/* claude's desk */
+.daily-banner {
+  font-size: 13px; color: var(--muted); line-height: 1.45;
+  background: #f4f1ea; border: 1px solid var(--line); border-radius: 8px;
+  padding: 10px 12px; margin: 0 0 12px 0;
+}
+.daily-asof { margin: 0 0 10px 2px; }
+.daily-commentary {
+  font-size: 15px; line-height: 1.5; margin: 10px 0 0 0;
+  padding: 10px 12px; background: #fff; border-left: 3px solid var(--navy); border-radius: 4px;
+}
+.daily-reason { font-size: 13px; color: var(--muted); margin: 6px 0 0 2px; }
+.daily-reason b { color: var(--ink); }
+.daily-log-row {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 8px 2px; border-bottom: 1px solid var(--line); font-size: 14px;
+}
+.daily-log-date { font-weight: 600; min-width: 92px; }
+.daily-log-val { font-weight: 600; }
+.daily-log-row .muted { margin-left: auto; }
+
 /* bottom tab bar */
 .tabbar {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 6;
-  display: grid; grid-template-columns: repeat(4, 1fr);
+  display: grid; grid-template-columns: repeat(5, 1fr);
   background: #fff; border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
 }

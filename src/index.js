@@ -307,6 +307,22 @@ async function handleMentor(request, env) {
   }
 }
 
+// ============================ PAPER RUN (Claude's Desk) ============================
+// Serves the discretionary paper-trading ledger that the daily Claude routine
+// commits to public/data/paper-run.json. Read network-only (the service worker
+// passes /api/* straight through) so the page never shows a stale ledger.
+async function handlePaperRun(request, env) {
+  try {
+    const assetUrl = new URL("/data/paper-run.json", request.url);
+    const res = await env.ASSETS.fetch(new Request(assetUrl.toString()));
+    if (!res.ok) return dataJson({ ok: false, reason: "no paper run yet" }, 200, false);
+    const body = await res.json();
+    return dataJson(body, 200, false);
+  } catch (e) {
+    return dataJson({ ok: false, reason: "paper run unavailable" }, 200, false);
+  }
+}
+
 // ============================ ROUTER ============================
 export default {
   async fetch(request, env, ctx) {
@@ -321,6 +337,9 @@ export default {
     }
     if (request.method === "GET" && path === "/api/movers") {
       return handleMovers(request, ctx);
+    }
+    if (request.method === "GET" && path === "/api/paper-run") {
+      return handlePaperRun(request, env);
     }
     if (request.method === "POST" && path === "/api/mentor") {
       return handleMentor(request, env);

@@ -1,5 +1,5 @@
-// app.js — bootstrap: service worker, tab navigation, and wiring for the four
-// views (Markets, Portfolio, Backtest, Mentor).
+// app.js — bootstrap: service worker, tab navigation, and wiring for the five
+// views (Markets, Portfolio, Backtest, Mentor, Claude's Desk).
 
 import * as data from "./data.js";
 import { renderChart } from "./chart.js";
@@ -7,10 +7,11 @@ import * as pf from "./portfolio.js";
 import { runBacktest } from "./backtest.js";
 import { BUILTIN_STRATEGIES, validateStrategy, symbolsOf, AVAILABLE_FACTORS } from "./strategy.js";
 import { initMentor } from "./mentor.js";
+import { renderDaily } from "./daily.js";
 
 const { fmtMoney, fmtPct, signClass } = data;
 const $ = (id) => document.getElementById(id);
-const TITLES = { markets: "Markets", portfolio: "Portfolio", backtest: "Backtest", mentor: "Mentor" };
+const TITLES = { markets: "Markets", portfolio: "Portfolio", backtest: "Backtest", mentor: "Mentor", daily: "Claude's Desk" };
 
 // ---- service worker ----
 if ("serviceWorker" in navigator) {
@@ -24,6 +25,7 @@ function showView(name) {
   $("view-title").textContent = TITLES[name];
   if (name === "portfolio") renderPortfolio();
   if (name === "backtest") rebuildStrategySelect();
+  if (name === "daily") renderDaily();
 }
 document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => showView(t.dataset.view)));
 
