@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "as_of": null,
+  "inception": null,
+  "start_cash": 10000,
+  "account": { "cash": 10000, "positions": {} },
+  "equity_curve": [],
+  "days": []
+}

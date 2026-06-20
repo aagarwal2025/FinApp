@@ -145,6 +145,19 @@
           </div>
         </div>
       </section>
+
+      <!-- ============ CLAUDE'S DESK ============ -->
+      <section id="view-daily" class="view">
+        <p class="daily-banner">Claude runs this paper account on its own each day — it
+          picks the strategy, decides the trades, and marks to the latest EOD close.
+          Decisions are Claude's judgment and won't reproduce. Simulated, not advice.</p>
+        <div class="daily-asof muted" id="daily-asof"></div>
+        <div class="card summary" id="daily-summary"></div>
+        <div id="daily-chart" class="chart-host"></div>
+        <div id="daily-latest"></div>
+        <div id="daily-holdings"></div>
+        <div id="daily-log"></div>
+      </section>
     </main>
 
     <nav class="tabbar">
@@ -152,6 +165,7 @@
       <button class="tab" data-view="portfolio">Portfolio</button>
       <button class="tab" data-view="backtest">Backtest</button>
       <button class="tab" data-view="mentor">Mentor</button>
+      <button class="tab" data-view="daily">Desk</button>
     </nav>
 
     <script type="module" src="/js/app.js"></script>
