@@ -84,9 +84,23 @@ export async function renderDaily() {
 
   holdings.innerHTML = renderHoldings(today);
 
+  const ledgerRows = days
+    .slice()
+    .reverse()
+    .map((d) => {
+      const v = d.snapshot && d.snapshot.value;
+      const ret = v != null ? v / startCash - 1 : null;
+      const n = (d.trades || []).length;
+      return (
+        `<tr><td>${esc(d.date)}</td><td>${fmtMoney(v)}</td>` +
+        `<td class="${signClass(ret)}">${fmtPct(ret)}</td><td>${n || "—"}</td></tr>`
+      );
+    })
+    .join("");
   log.innerHTML =
-    '<h2 class="section-h">History</h2>' +
-    days.slice().reverse().map(dayRow).join("");
+    '<h2 class="section-h">Daily ledger</h2>' +
+    `<table class="data"><thead><tr><th>Date</th><th>Value</th><th>Return</th><th>Trades</th></tr></thead>` +
+    `<tbody>${ledgerRows}</tbody></table>`;
 }
 
 function renderTrades(trades) {
@@ -130,16 +144,6 @@ function renderHoldings(today) {
     `<h2 class="section-h">Holdings</h2><table class="data"><thead><tr>` +
     `<th>Symbol</th><th>Shares</th><th>Price</th><th>Value</th><th>Gain</th></tr></thead>` +
     `<tbody>${rows}</tbody></table>`
-  );
-}
-
-function dayRow(d) {
-  const v = d.snapshot && d.snapshot.value;
-  const n = (d.trades || []).length;
-  return (
-    `<div class="daily-log-row"><span class="daily-log-date">${esc(d.date)}</span>` +
-    `<span class="daily-log-val">${fmtMoney(v)}</span>` +
-    `<span class="muted">${n ? `${n} trade${n > 1 ? "s" : ""}` : "held"}</span></div>`
   );
 }
 

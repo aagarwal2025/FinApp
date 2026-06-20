@@ -308,19 +308,26 @@ async function handleMentor(request, env) {
 }
 
 // ============================ PAPER RUN (Claude's Desk) ============================
-// Serves the discretionary paper-trading ledger that the daily Claude routine
-// commits to public/data/paper-run.json. Read network-only (the service worker
-// passes /api/* straight through) so the page never shows a stale ledger.
+// Serves the discretionary paper-trading ledger. The daily Claude routine writes it
+// to Cloudflare D1 (the DESK_DB binding) via the Cloudflare MCP connector; we read
+// D1 first and fall back to the committed seed file (public/data/paper-run.json) so
+// the tab shows "awaiting first run" before the first write. Network-only (no-store)
+// so the phone never sees a stale ledger.
 async function handlePaperRun(request, env) {
   try {
-    const assetUrl = new URL("/data/paper-run.json", request.url);
-    const res = await env.ASSETS.fetch(new Request(assetUrl.toString()));
-    if (!res.ok) return dataJson({ ok: false, reason: "no paper run yet" }, 200, false);
-    const body = await res.json();
-    return dataJson(body, 200, false);
+    if (env.DESK_DB) {
+      const row = await env.DESK_DB.prepare("SELECT doc FROM ledger WHERE id = 1").first();
+      if (row && row.doc) return dataJson(JSON.parse(row.doc), 200, false);
+    }
   } catch (e) {
-    return dataJson({ ok: false, reason: "paper run unavailable" }, 200, false);
+    // fall through to the seed file on any D1 error
   }
+  try {
+    const seedUrl = new URL("/data/paper-run.json", request.url);
+    const res = await env.ASSETS.fetch(new Request(seedUrl.toString()));
+    if (res.ok) return dataJson(await res.json(), 200, false);
+  } catch (e) {}
+  return dataJson({ ok: false, reason: "no paper run yet" }, 200, false);
 }
 
 // ============================ ROUTER ============================

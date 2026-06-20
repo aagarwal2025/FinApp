@@ -16,6 +16,14 @@ directory = "./public"
 binding = "ASSETS"
 run_worker_first = ["/api/*"]
 
+# Claude's Desk ledger store. The daily routine writes the paper-run JSON into the
+# `ledger` table via the Cloudflare D1 MCP connector; the Worker reads it for
+# /api/paper-run (no git push, no redeploy per run).
+[[d1_databases]]
+binding = "DESK_DB"
+database_name = "finapp-desk"
+database_id = "580c8596-00bc-45a1-bf52-1187f91c1ec8"
+
 [observability]
 enabled = false
 head_sampling_rate = 1
