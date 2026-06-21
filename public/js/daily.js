@@ -79,7 +79,7 @@ export async function renderDaily() {
 
   const points = (run.equity_curve || []).filter((p) => p && isFinite(p.v));
   if (points.length > 1) {
-    renderChart(chart, [{ label: "Claude's account", color: "#1f3a5f", points }]);
+    renderChart(chart, [{ label: "Claude's account", color: "#2d4ef5", points }]);
   } else {
     chart.innerHTML = '<p class="muted">Equity curve will appear after a few runs.</p>';
   }

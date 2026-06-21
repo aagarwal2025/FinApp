@@ -302,8 +302,8 @@ async function runCurrentBacktest() {
       <p class="muted">Hypothetical: $10,000 start, fills at EOD close, weights drift between rebalances. CASH assumes 0% yield. Not advice.</p>
     </div>`;
 
-  const series = [{ label: strategy.name, color: "#1f3a5f", points: r.equity }];
-  if (r.benchmark) series.push({ label: `${r.benchmarkSymbol} (B&H)`, color: "#b5651d", points: r.benchmark });
+  const series = [{ label: strategy.name, color: "#2d4ef5", points: r.equity }];
+  if (r.benchmark) series.push({ label: `${r.benchmarkSymbol} (B&H)`, color: "#141414", points: r.benchmark });
   renderChart($("bt-chart"), series, { log: true });
 
   lastBacktestSummary =

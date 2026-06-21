@@ -55,12 +55,12 @@ export function renderChart(host, series, opts = {}) {
   // baseline + top reference (light)
   for (const v of [vMin, vMax]) {
     svg.appendChild(el("line", { x1: PADL, y1: Y(v), x2: W - PADR, y2: Y(v),
-      stroke: "#e3ded3", "stroke-width": 1 }));
-    svg.appendChild(el("text", { x: W - PADR + 4, y: Y(v) + 3, fill: "#6b6b66", "font-size": 10 })).textContent = fmtVal(v);
+      stroke: "#e8e6e0", "stroke-width": 1 }));
+    svg.appendChild(el("text", { x: W - PADR + 4, y: Y(v) + 3, fill: "#76746e", "font-size": 10 })).textContent = fmtVal(v);
   }
 
   clean.forEach((s, idx) => {
-    const color = s.color || (idx === 0 ? "#1f3a5f" : "#b5651d");
+    const color = s.color || (idx === 0 ? "#2d4ef5" : "#141414");
     const d = s.points.map((p, i) => `${i ? "L" : "M"}${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`).join(" ");
     svg.appendChild(el("path", { d, fill: "none", stroke: color, "stroke-width": 1.6,
       "stroke-linejoin": "round" }));
@@ -69,8 +69,8 @@ export function renderChart(host, series, opts = {}) {
   });
 
   // x labels: first & last date
-  svg.appendChild(el("text", { x: PADL, y: H - 4, fill: "#6b6b66", "font-size": 10 })).textContent = fmtDate(tMin);
-  const xr = el("text", { x: W - PADR, y: H - 4, fill: "#6b6b66", "font-size": 10, "text-anchor": "end" });
+  svg.appendChild(el("text", { x: PADL, y: H - 4, fill: "#76746e", "font-size": 10 })).textContent = fmtDate(tMin);
+  const xr = el("text", { x: W - PADR, y: H - 4, fill: "#76746e", "font-size": 10, "text-anchor": "end" });
   xr.textContent = fmtDate(tMax);
   svg.appendChild(xr);
 
@@ -81,7 +81,7 @@ export function renderChart(host, series, opts = {}) {
     const leg = document.createElement("div");
     leg.style.cssText = "display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-top:6px";
     clean.forEach((s, idx) => {
-      const color = s.color || (idx === 0 ? "#1f3a5f" : "#b5651d");
+      const color = s.color || (idx === 0 ? "#2d4ef5" : "#141414");
       const item = document.createElement("span");
       item.innerHTML = `<span style="display:inline-block;width:10px;height:10px;background:${color};border-radius:2px;margin-right:5px;vertical-align:middle"></span>${s.label || ""}`;
       leg.appendChild(item);
