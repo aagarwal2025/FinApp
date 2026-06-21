@@ -1,7 +1,7 @@
 // Service worker: cache-first for the app shell so FinApp opens offline and
 // installs cleanly on Android. API requests (/api/*) always go to the network
 // — they have their own server-side cache and must stay fresh.
-const CACHE = "finapp-shell-v9";
+const CACHE = "finapp-shell-v10";
 const SHELL = [
   "/",
   "/index.html",
