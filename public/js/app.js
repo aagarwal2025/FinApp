@@ -428,6 +428,29 @@ initMentor({
   },
 });
 
+// ---- US market LED (NYSE regular hours 9:30–16:00 ET, Mon–Fri; holidays ignored) ----
+function usMarketOpen(now = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(now);
+  const get = (t) => parts.find((p) => p.type === t)?.value;
+  const wd = get("weekday");
+  if (wd === "Sat" || wd === "Sun") return false;
+  let hh = parseInt(get("hour"), 10);
+  if (hh === 24) hh = 0;
+  const mins = hh * 60 + parseInt(get("minute"), 10);
+  return mins >= 570 && mins < 960; // 9:30 → 16:00 ET
+}
+function updateMarketLed() {
+  const led = $("market-led");
+  if (!led) return;
+  const open = usMarketOpen();
+  led.classList.toggle("is-open", open);
+  led.title = open ? "US market open" : "US market closed";
+}
+updateMarketLed();
+setInterval(updateMarketLed, 30000);
+
 // ---- start ----
 initMarkets();
 showView("markets");

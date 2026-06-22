@@ -56,9 +56,33 @@ body {
   content: "FINAPP"; font: 400 10px/1 var(--mono);
   letter-spacing: .24em; color: var(--muted);
 }
+.topbar-title { display: flex; align-items: center; gap: 11px; }
 .topbar h1 {
   font-family: var(--display); font-size: 34px; line-height: .92;
   margin: 0; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+}
+
+/* market LED — Nothing-style indicator dot: lit red + slow Glyph pulse when
+   the US market is open; an unlit, recessed dot when closed. */
+.market-led {
+  flex: 0 0 auto; width: 11px; height: 11px; border-radius: 50%;
+  background: #2a0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.7);
+  transition: background .35s ease, box-shadow .35s ease;
+}
+.market-led.is-open {
+  background: var(--accent);
+  border-color: transparent;
+  box-shadow: 0 0 0 1px rgba(255, 45, 45, 0.35), 0 0 10px 1px rgba(255, 45, 45, 0.7);
+  animation: led-pulse 1.8s ease-in-out infinite;
+}
+@keyframes led-pulse {
+  0%, 100% { opacity: 1;   box-shadow: 0 0 0 1px rgba(255, 45, 45, 0.35), 0 0 10px 1px rgba(255, 45, 45, 0.7); }
+  50%      { opacity: .55; box-shadow: 0 0 0 1px rgba(255, 45, 45, 0.20), 0 0 4px 0 rgba(255, 45, 45, 0.4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .market-led.is-open { animation: none; }
 }
 .topbar-note {
   position: absolute; right: 18px; top: calc(16px + env(safe-area-inset-top));
